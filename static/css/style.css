@@ -1,0 +1,30 @@
+
+.icon-bar {
+    margin:2;
+    width: 40px;
+    background-color: rgb(170, 187, 194);
+    position:fixed;
+    z-index: 1000;
+    
+  }
+  
+  .icon-bar a {
+    display: block;
+    text-align: center;
+    padding: 5px;
+    transition: all 0.3s ease;
+    color: white;
+    font-size: 36px;
+    height: 30px;
+  }
+  
+  .icon-bar a:hover {
+    background-color: #1c315bc1;
+  }
+
+  .icon-bar a.active {
+    background-color: #126721c1;
+  }
+  .icon-bar a:not(.active) {
+    background-color:rgb(170, 187, 194);
+  }

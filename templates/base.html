@@ -1,0 +1,371 @@
+
+{%load static%}
+<!doctype html>
+<html lang="en">
+  <head>
+    
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@v9.1.0/ol.css">
+    <!-- <link rel="stylesheet" href="{% static 'css/ol.css' %}"> -->
+    <link rel="stylesheet" href="{% static 'font-awesome/css/font-awesome.css' %}">
+    <link href="{% static 'css/jstree/default/style.css' %}" rel="stylesheet" />
+
+    <link rel="stylesheet" href="{% static 'css/jquery.modal.min.css' %}">
+    <style>
+      .map {
+        height: 400px;
+        width: 100%;
+      }
+      .ol-popup {
+        
+        background-color: white;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        padding: 15px;
+        border-radius: 10px;
+        border: 1px solid #cccccc;
+        bottom: 12px;
+        left: -50px;
+        min-width: 280px;
+      }
+      .ol-popup:after, .ol-popup:before {
+        top: 100%;
+        border: solid transparent;
+        content: " ";
+        height: 0;
+        width: 0;
+        position: absolute;
+        pointer-events: none;
+      }
+      .ol-popup:after {
+        border-top-color: white;
+        border-width: 10px;
+        left: 48px;
+        margin-left: -10px;
+      }
+      .ol-popup:before {
+        border-top-color: #cccccc;
+        border-width: 11px;
+        left: 48px;
+        margin-left: -11px;
+      }
+      .ol-popup-closer {
+        text-decoration: none;
+        position: absolute;
+        top: 2px;
+        right: 8px;
+      }
+      .ol-popup-closer:after {
+        content: "✖";
+      }
+      .jstree li {
+        float: none;
+        height: auto;
+    }
+
+    .jstree-hovered, .jstree-wholerow-hovered {
+        background-color: #21c09f !important;
+    }
+
+    .jstree-icon.jstree-themeicon {
+        display: none;
+    }
+    .collapsible {
+  background-color: #a2bfda;
+  color: #444;
+  cursor: pointer;
+  padding: 18px;
+  position: absolute;
+  width:120px;
+  border: none;
+  text-align: left;
+  outline: none;
+  font-size: 15px;
+  z-index: 1000;
+ right: 20px;
+}
+
+/* Add a background color to the button if it is clicked on (add the .active class with JS), and when you move the mouse over it (hover) */
+.active, .collapsible:hover {
+  background-color: #8a8cd5;
+}
+
+/* Style the collapsible content. Note: hidden by default */
+.content {
+  padding: 0 18px;
+  display: none;
+  overflow: hidden;
+  background-color: #f1f1f1;
+}
+    </style>
+    
+    <title>سامانه اطلاعات مکانی</title>
+  </head>
+  <body>
+    <div class="icon-bar" >
+      <a  href="{% url 'accounts:login'%}"><i class="fa fa-sign-in" style="font-size:24px"></i></a>
+      <a  href="{% url 'logout'%}"><i class="fa fa-sign-out" style="font-size:24px" ></i></a>
+      <a href="#"><i class="fa "><img  src="{% static 'img/zoom-extent.png' %}" onclick="zoom_ex()" title="zoom extent" id="zx" ></i></a>
+      <!-- <a href="#"  id="aatt" class="jjj" >cccc</a> -->
+
+      {%if user.is_authenticated %}
+      <a href="#" class="toolb LineString" ><i class="fa "></i><img  src="{% static 'img/line-create.png' %}" onclick="draw_control('LineString')" title="draw line"></a>
+      <a href="#" class="toolb Point" ><i class="fa "></i><img  src="{% static 'img/point-create.png' %}" onclick="draw_control('Point')" title="draw point"></a>
+      <a href="#" class="toolb Polygon"><i class="fa "></i><img  src="{% static 'img/polygon-create.png' %}" onclick="draw_control('Polygon')" title="draw polygon"></a>
+      <a href="#" class="edit"><i class="fa "></i><img  src="{% static 'img/edit.png' %}" onclick="modif()" title="ویرایش عوارض" ></a>
+      <a href="#" class="del"><i class="fa "></i><img  src="{% static 'img/selected-delete.png' %}" onclick="delete1()" title="حذف عارضه"></a>
+      <a href="#" class="del"><i class="fa "></i><img  src="{% static 'img/id.png' %}" onclick="iden()" title="اطلاعات توصی"></a>
+      
+      {% endif %}
+    
+    </div>
+    
+    <button type="button" class="collapsible">لایه های نقشه</button>
+   
+  <!-- layerrrrrr -->
+  <div id="layers" class="content" style="width:250px;direction: rtl;height:auto;background-color:#a3a9aa;position:absolute;right:0px;top:50px;z-index:2000">
+    
+    <div style="height:50px"></div>
+    <!-- 3 setup a container element position:absolute;right:0px;top:150px;z-index:2000 -->
+    <div id="legend_layers">
+        
+    </div>
+    <!-- <div style="width:100%;text-align:center;margin-top:30px">
+        <button id="btn_set_access_level" style="font-family:Tahoma; background-color:#27a087;width:200px;height:40px;border:0px;color:#fff;cursor:pointer" onclick="set_access_level()">اعمال دسترسی به لایه ها</button>
+    </div> -->
+</div>
+    
+    <div id="map" class="map" style="height:700px;">
+      <!-- <div id="zooms" class='zoom_slider111' style="width:150px;height:40px;position:absolute;left:10px;bottom:30px;z-index:2000;background:#434a5a;color:#fff;opacity: 0.6;text-align:left;padding:10px;border:1px solid #d0d0d0"></div></div> -->
+
+      <div id="location" class='custom-mouse-position' style="width:150px;height:40px;position:fixed;left:10px;bottom:30px;z-index:2000;background:#434a5a;color:#fff;opacity: 0.6;text-align:left;padding:10px;border:1px solid #d0d0d0"></div>
+    <!-- <div style="display: none" id="jsonData" data-json="{{ data }}"></div> -->
+    
+    <div id="popup" class="ol-popup">
+      <a href="#" id="popup-closer" class="ol-popup-closer"></a>
+      <div id="popup-content">   
+        <div><h1>{{request.user.id}}</h1></div>
+      </div>
+    </div>
+  
+   <div id="attable" class="attable" dir="rtl" style="display: none;">
+      <form method="POST" >
+        {% csrf_token %}
+        <div class="div">malek</div>
+        <input id="owner" name="owner">
+        <div class="div">cod</div>
+        <input id="code" name="code">
+        <div class="div">
+          <button  id="submit" type="submit">OK</button>
+        </div>
+        
+      </form>
+   </div>
+    
+   
+    {%block content%}
+
+ 
+    {%endblock content%}
+   
+
+    <script src="https://cdn.jsdelivr.net/npm/ol@v9.1.0/dist/ol.js"></script>
+    <!-- <script src="{% static 'js/jstree.js' %}"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.12.1/jquery.min.js"></script>
+    <!-- <script src="{% static 'js/jquery.modal.min.js' %}"></script> -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-modal/0.9.2/jquery.modal.min.js"></script>
+    <script src="{% static 'js/jstree.js' %}"></script>
+    <script src="{% static 'js/jstree.min.js' %}"></script>
+    <script src="{% static 'js/jstree.checkbox.js' %}"></script>
+    <script src="{% static 'js/jstree.wholerow.js' %}"></script>
+   
+    
+    <!-- <script src="{% static 'js/jquery-3.3.1.min.js' %}"></script> -->
+    <!-- <script src="{% static 'js/ol.js' %}"></script> -->
+    <script src="{% static 'js/ol-layerswitcher.js' %}"></script>
+    <script src="{% static 'js/map.js' %}"></script> 
+    <script>
+      /////دکمه لایه ها
+var coll = document.getElementsByClassName("collapsible");
+var i;
+
+for (i = 0; i < coll.length; i++) {
+  coll[i].addEventListener("click", function() {
+    this.classList.toggle("active");
+    var content = this.nextElementSibling;
+    if (content.style.display === "block") {
+      content.style.display = "none";
+    } else {
+      content.style.display = "block";
+    }
+  });
+}
+
+////فرم ایجاد اطلاعات توصیفی
+
+// $('#aatt').click(function () {
+
+// $("#attable").modal();
+// });
+
+       var layer_json = [];
+    var data = JSON.parse ("{{data | escapejs}}");
+    
+    var d=(new Function("return [" + data+ "];")());
+   
+    var lala=d[0][0]['fields']
+    
+    for (let i = 0; i < d[0].length; i++) {
+     //console.log(d[0][i]['fields'].en_name)
+      var url1=d[0][i]['fields'].url;
+      var en_name1=d[0][i]['fields'].en_name;
+      var id1=d[0][i]['fields'].id;
+      var fa_name1=d[0][i]['fields'].fa_name;
+      var source = new ol.source.TileWMS({
+            url: url1,
+            params: { 'LAYERS': en_name1, 'TILED': true },
+            serverType: 'geoserver',
+
+        });
+        map.addLayer(new ol.layer.Tile({
+            source: source,
+            opacity: 0.6,
+            title:  en_name1
+        }));
+        layer_json.push({ 'id': en_name1 + '$' + id1, 'text': fa_name1,'title': en_name1 });
+
+    }
+
+</script>
+<script>
+    $(document).ready(function () {
+      get_user_vector();
+      create_legend();
+    });
+   function add_vector_to_db(geojson1) {
+        let csrftoken = '{{ csrf_token }}'
+        //data_for_send = { "geometry": geojson1 };
+        data_for_send = geojson1;
+        $.ajax({
+          
+            url:  '{%url 'index:addVectorToDb'  %}',
+            type: 'POST',
+            headers:{'X-CSRFToken':csrftoken},
+            dataType: 'json',
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify(data_for_send),
+          
+            success: function () {
+              // console.log(typeof(geojson1))
+            },
+            fail: function () {
+              
+            }
+        });
+    };
+
+    function get_user_vector() {
+        $.ajax({
+
+            type: 'GET',
+            dataType: 'json',
+            contentType: 'application/json; charset=utf-8',
+            url: '{%url 'index:GetVectorFromDB'  %}',
+            success: 
+            function (response) {            
+             format = new ol.format.GeoJSON();
+              //var d=JSON.parse(JSON.stringify(response) )
+              //ff=JSON.loads(d[0].geojson)
+              //console.log(response)
+              for (i = 0; i < response.length; i++) {
+                   //lkhg=JSON.loads(response[0].geojson)
+                  // console.log(typeof(lkhg))
+                   //var features = format.readFeatures(d[i].geojson);
+                  //ff= JSON.parse(JSON.stringify(d[i].geojson))
+                  b=response[i].geojson
+                 // console.log(b)
+                   deserialize(b,response[i].id);
+                    
+                }
+                
+              }
+            ,
+            fail: function (data) {
+
+            }
+        });
+    }
+
+    function modif_selected(f_id,geojson22) {
+      let csrftoken = '{{ csrf_token }}'
+        data_for_send = { "f_id": f_id, "geojson22": geojson22}
+        $.ajax({
+            url:  '{%url 'index:virayeshVector'  %}',
+            type: 'POST',
+            headers:{'X-CSRFToken':csrftoken},
+            dataType: 'json',
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify(data_for_send),
+          
+            success: function () {
+              //console.log(data_for_send)
+            },
+            fail: function () {
+              
+            }
+        });
+    };
+    function delete_selected(f_id) {
+    
+      let csrftoken = '{{ csrf_token }}'
+       
+        data_for_send = f_id;
+        $.ajax({
+          
+            url:  '{%url 'index:delete_feature'  %}',
+            type: 'POST',
+            headers:{'X-CSRFToken':csrftoken},
+            dataType: 'json',
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify(data_for_send),
+          
+            success: function () {
+              //console.log(data_for_send)
+            },
+            fail: function () {
+              
+            }
+        });
+
+    }
+    function iden(){
+      $.ajax({
+
+        type: 'GET',
+        dataType: 'json',
+        contentType: 'application/json; charset=utf-8',
+        url: '{%url 'index:Identify'  %}',
+        success: function (response) {  
+                identify();          
+                // format = new ol.format.GeoJSON();
+               
+                // for (i = 0; i < response.length; i++) {
+           
+                //   b=response[i].geojson
+                //   // console.log(b)
+                 
+                //  }
+                },
+        fail: function (data) {}
+    })}
+  
+</script>
+
+<script>
+  var identify_url = '{%url 'index:Identify'  %}';
+</script>
+  </body>
+   
+  
+</html>
+
+ <!-- user_id=  models.ForeignKey(User, verbose_name=_("کاربر"), related_name="uservector" , on_delete=models.CASCADE,blank=True, null=True)  -->
